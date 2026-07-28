@@ -14,5 +14,5 @@ void loop() {
   PINC = (1 << PC7); // Toggle PC7
   delay(500); // Wait for 500 milliseconds
   PINC = (1 << PC7); // Toggle PC7 again
-  delay(500); // Wait for 500 milliseconds
+  delay(500); // Wait for 500 milliseconds  
 }
