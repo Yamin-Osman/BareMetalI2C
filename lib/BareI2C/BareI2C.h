@@ -1,3 +1,4 @@
+#pragma once
 #include <stdint.h>
 #include <stddef.h>
 
@@ -9,10 +10,11 @@ enum class I2CStatus{
     StartConditionFailed,
     AddressNack,
     DataNack,
-    AbitrationLost,
+    ArbitrationLost,
     BusError,
     ReceiveFailed,
     StopConditionFailed,
+    InvalidAddress,
 };
 
 I2CStatus I2CInit(uint32_t frequency);
