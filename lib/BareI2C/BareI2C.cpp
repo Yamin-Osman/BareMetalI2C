@@ -3,8 +3,21 @@
 
 namespace
 {
-    constexpr uint16_t kMaxLoopCount = 50000; 
-    
+    constexpr uint16_t kMaxLoopCount = 50000;
+    constexpr uint8_t kStatusMask = 0xF8;
+    constexpr uint8_t kStartTransmitted = 0x08;
+    constexpr uint8_t kRepeatedStartTransmitted = 0x10;
+    constexpr uint8_t kSlaWriteAck = 0x18;
+    constexpr uint8_t kSlaWriteNack = 0x20;
+    constexpr uint8_t kDataWriteAck = 0x28;
+    constexpr uint8_t kDataWriteNack = 0x30;
+    constexpr uint8_t kSlaReadAck = 0x40;
+    constexpr uint8_t kSlaReadNack = 0x48;
+    constexpr uint8_t kDataReadAck = 0x50;
+    constexpr uint8_t kDataReadNack = 0x58;
+    constexpr uint8_t kArbitrationLost = 0x38;
+    constexpr uint8_t kBusError = 0x00;
+
     enum class StartType
     {
         Initial,
@@ -25,7 +38,7 @@ namespace
     I2CStatus WaitForInt()
     {
 
-        uint32_t count = 0;
+        uint16_t count = 0;
         while (!(TWCR & (1 << TWINT)))
         {
             count++;
@@ -45,25 +58,25 @@ namespace
             return wait;
         }
 
-        uint8_t checkStatus = TWSR & 0xF8;
+        uint8_t checkStatus = TWSR & kStatusMask;
         if (condition == StartType::Initial)
         {
-            if (checkStatus == 0x08)
+            if (checkStatus == kStartTransmitted)
             {
                 return I2CStatus::Ok;
             }
         }
         else if (condition == StartType::Repeated)
         {
-            if (checkStatus == 0x10)
+            if (checkStatus == kRepeatedStartTransmitted)
                 return I2CStatus::Ok;
         }
 
-        if (checkStatus == 0x38)
+        if (checkStatus == kArbitrationLost)
         {
             return I2CStatus::ArbitrationLost;
         }
-        else if (checkStatus == 0x00)
+        else if (checkStatus == kBusError)
         {
             return I2CStatus::BusError;
         }
@@ -73,7 +86,7 @@ namespace
     I2CStatus SendStop()
     {
         TWCR = (1 << TWEN) | (1 << TWSTO) | (1 << TWINT);
-        uint32_t count = 0;
+        uint16_t count = 0;
         while (TWCR & (1 << TWSTO))
         {
             count++;
@@ -102,25 +115,25 @@ namespace
             return wait;
         }
 
-        uint8_t checkStatus = TWSR & 0xF8;
+        uint8_t checkStatus = TWSR & kStatusMask;
         if (type == ReadOrWrite::Write)
         {
-            if (checkStatus == 0x18)
+            if (checkStatus == kSlaWriteAck)
             {
                 return I2CStatus::Ok;
             }
-            else if (checkStatus == 0x20)
+            else if (checkStatus == kSlaWriteNack)
             {
                 return I2CStatus::AddressNack;
             }
         }
         if (type == ReadOrWrite::Read)
         {
-            if (checkStatus == 0x40)
+            if (checkStatus == kSlaReadAck)
             {
                 return I2CStatus::Ok;
             }
-            else if (checkStatus == 0x48)
+            else if (checkStatus == kSlaReadNack)
             {
                 return I2CStatus::AddressNack;
             }
@@ -130,7 +143,7 @@ namespace
         {
             return I2CStatus::ArbitrationLost;
         }
-        else if (checkStatus == 0x00)
+        else if (checkStatus == kBusError)
         {
             return I2CStatus::BusError;
         }
@@ -146,12 +159,12 @@ namespace
         {
             return wait;
         }
-        uint8_t checkStatus = TWSR & 0xF8;
-        if (checkStatus == 0x28)
+        uint8_t checkStatus = TWSR & kStatusMask;
+        if (checkStatus == kDataWriteAck)
         {
             return I2CStatus::Ok;
         }
-        else if (checkStatus == 0x30)
+        else if (checkStatus == kDataWriteNack)
         {
             return I2CStatus::DataNack;
         }
@@ -159,7 +172,7 @@ namespace
         {
             return I2CStatus::ArbitrationLost;
         }
-        else if (checkStatus == 0x00)
+        else if (checkStatus == kBusError)
         {
             return I2CStatus::BusError;
         }
@@ -183,13 +196,13 @@ namespace
             return wait;
         }
 
-        uint8_t checkStatus = TWSR & 0xF8;
-        if (checkStatus == 0x50 && respond == SendAck::Ack)
+        uint8_t checkStatus = TWSR & kStatusMask;
+        if (checkStatus == kDataReadAck && respond == SendAck::Ack)
         {
             *data = TWDR;
             return I2CStatus::Ok;
         }
-        else if (checkStatus == 0x58 && respond == SendAck::Nack)
+        else if (checkStatus == kDataReadNack && respond == SendAck::Nack)
         {
             *data = TWDR;
             return I2CStatus::Ok;
@@ -198,7 +211,7 @@ namespace
         {
             return I2CStatus::ArbitrationLost;
         }
-        else if (checkStatus == 0x00)
+        else if (checkStatus == kBusError)
         {
             return I2CStatus::BusError;
         }
@@ -233,7 +246,7 @@ I2CStatus I2CInit(uint32_t frequency)
 
 I2CStatus I2CWrite(uint8_t address, const uint8_t *data, size_t length)
 {
-    if (address < 0x08 || address > 0x77)
+    if (address < kStartTransmitted || address > 0x77)
     {
         return I2CStatus::InvalidAddress;
     }
@@ -293,7 +306,7 @@ I2CStatus I2CWrite(uint8_t address, const uint8_t *data, size_t length)
 
 I2CStatus I2CRead(uint8_t address, uint8_t *data, size_t length)
 {
-    if (address < 0x08 | address > 0x77)
+    if (address < kStartTransmitted | address > 0x77)
     {
         return I2CStatus::InvalidAddress;
     }
@@ -327,6 +340,109 @@ I2CStatus I2CRead(uint8_t address, uint8_t *data, size_t length)
     {
         SendAck response = (index == length - 1) ? SendAck::Nack : SendAck::Ack;
         I2CStatus checkRead = ReadByte(&data[index], response);
+
+        if (checkRead == I2CStatus::ReceiveFailed)
+        {
+            I2CStatus checkStop = SendStop();
+            if (checkStop != I2CStatus::Ok)
+            {
+                return checkStop;
+            }
+            return checkRead;
+        }
+        else if (checkRead != I2CStatus::Ok)
+        {
+            return checkRead;
+        }
+    }
+
+    I2CStatus checkStop = SendStop();
+    if (checkStop != I2CStatus::Ok)
+    {
+        return checkStop;
+    }
+
+    return I2CStatus::Ok;
+}
+
+I2CStatus I2CWriteRead(uint8_t address, const uint8_t *writeData, size_t writeLength, uint8_t *readData, size_t readLength)
+{
+    if (address < kStartTransmitted || address > 0x77)
+    {
+        return I2CStatus::InvalidAddress;
+    }
+
+    if (writeData == nullptr && writeLength > 0)
+    {
+        return I2CStatus::InvalidArgument;
+    }
+    if (readData == nullptr || readLength == 0)
+    {
+        return I2CStatus::InvalidArgument;
+    }
+
+    I2CStatus checkStart = SendStart(StartType::Initial);
+    if (checkStart != I2CStatus::Ok)
+    {
+        return checkStart;
+    }
+    I2CStatus checkAddress = SendAddress(address, ReadOrWrite::Write);
+    if (checkAddress == I2CStatus::AddressNack)
+    {
+        I2CStatus checkStop = SendStop();
+        if (checkStop != I2CStatus::Ok)
+        {
+            return checkStop;
+        }
+        return checkAddress;
+    }
+    else if (checkAddress != I2CStatus::Ok)
+    {
+        return checkAddress;
+    }
+
+    for (size_t index = 0; index < writeLength; index++)
+    {
+        I2CStatus checkWrite = WriteByte(writeData[index]);
+        if (checkWrite == I2CStatus::DataNack)
+        {
+            I2CStatus checkStop = SendStop();
+            if (checkStop != I2CStatus::Ok)
+            {
+                return checkStop;
+            }
+            return checkWrite;
+        }
+        else if (checkWrite != I2CStatus::Ok)
+        {
+            return checkWrite;
+        }
+    }
+
+    I2CStatus checkStart = SendStart(StartType::Repeated);
+    if (checkStart != I2CStatus::Ok)
+    {
+        return checkStart;
+    }
+    I2CStatus checkAddress = SendAddress(address, ReadOrWrite::Read);
+    if (checkAddress == I2CStatus::AddressNack)
+    {
+        I2CStatus checkStop0 = SendStop();
+        if (checkStop0 != I2CStatus::Ok)
+        {
+            return checkStop0;
+        }
+        return checkAddress;
+    }
+    else if (checkAddress != I2CStatus::Ok)
+    {
+        return checkAddress;
+    }
+
+    for (size_t index = 0; index < readLength; index++)
+    {
+        SendAck response = (index == readLength - 1) ? SendAck::Nack : SendAck::Ack;
+        I2CStatus checkRead = ReadByte(&readData[index], response);
 
         if (checkRead == I2CStatus::ReceiveFailed)
         {
