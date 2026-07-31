@@ -81,26 +81,27 @@ Writes data to a device, generates a repeated START and then reads data without 
 
 ### Write transaction
 
-
+```text
 START
 → Device address + Write
 → Data
 → STOP
-
+```
 
 ### Read transaction
 
-
+```text
 START
 → Device address + Read
 → Receive data
 → NACK final byte
 → STOP
+```
 
 
 ### Combined write-read transaction
 
-
+```text
 START
 → Device address + Write
 → Register address or command
@@ -108,6 +109,7 @@ START
 → Device address + Read
 → Receive data
 → STOP
+```
 
 
 ## Internal Design
