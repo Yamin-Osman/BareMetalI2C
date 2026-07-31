@@ -246,7 +246,7 @@ I2CStatus I2CInit(uint32_t frequency)
 
 I2CStatus I2CWrite(uint8_t address, const uint8_t *data, size_t length)
 {
-    if (address < kStartTransmitted || address > 0x77)
+    if (address < 0x08 || address > 0x77)
     {
         return I2CStatus::InvalidAddress;
     }
@@ -306,7 +306,7 @@ I2CStatus I2CWrite(uint8_t address, const uint8_t *data, size_t length)
 
 I2CStatus I2CRead(uint8_t address, uint8_t *data, size_t length)
 {
-    if (address < kStartTransmitted | address > 0x77)
+    if (address < 0x08 || address > 0x77)
     {
         return I2CStatus::InvalidAddress;
     }
@@ -367,7 +367,7 @@ I2CStatus I2CRead(uint8_t address, uint8_t *data, size_t length)
 
 I2CStatus I2CWriteRead(uint8_t address, const uint8_t *writeData, size_t writeLength, uint8_t *readData, size_t readLength)
 {
-    if (address < kStartTransmitted || address > 0x77)
+    if (address < 0x08 || address > 0x77)
     {
         return I2CStatus::InvalidAddress;
     }
@@ -419,12 +419,12 @@ I2CStatus I2CWriteRead(uint8_t address, const uint8_t *writeData, size_t writeLe
         }
     }
 
-    I2CStatus checkStart = SendStart(StartType::Repeated);
+    checkStart = SendStart(StartType::Repeated);
     if (checkStart != I2CStatus::Ok)
     {
         return checkStart;
     }
-    I2CStatus checkAddress = SendAddress(address, ReadOrWrite::Read);
+    checkAddress = SendAddress(address, ReadOrWrite::Read);
     if (checkAddress == I2CStatus::AddressNack)
     {
         I2CStatus checkStop0 = SendStop();
