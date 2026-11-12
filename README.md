@@ -1,14 +1,12 @@
 # Bare-Metal AVR I2C Driver
 
-This is a small I2C driver that I wrote in C++ for the ATmega32U4 on an Arduino Leonardo.
+A small, blocking I2C driver written in C++ for the ATmega32U4 (Arduino Leonardo). Instead of using the Arduino `Wire` library, it communicates with the AVR TWI hardware directly through its registers.
 
-I built it as a learning project because I wanted to understand what the Arduino `Wire` library does behind the scenes. Instead of using `Wire.h`, this driver communicates with the AVR TWI hardware directly through its registers.
-
-This is my first complete register-level communication driver, so the main goal of the project is learning rather than replacing an existing production library.
+I built it as a learning project to understand what `Wire` does behind the scenes. It is my first complete register-level communication driver, so the goal is learning rather than replacing a production library.
 
 ## Current Status
 
-The first version of the driver is complete and compiles successfully.
+The driver is complete, compiles, and has been validated on real hardware: it is used in my [Gesture Glove](https://github.com/Yamin-Osman/Gesture-Glove) project to communicate with an MPU6050 IMU in place of `Wire.h`.
 
 It currently supports:
 
@@ -22,15 +20,13 @@ It currently supports:
 - Basic argument and address validation
 - Error reporting through an `I2CStatus` enum
 
-Hardware testing is still in progress.
-
-My original MPU6050 modules were unreliable, so I decided not to use them as the main test hardware. I have ordered SSD1306 OLED displays and will use one to test the write side of the driver.
+An earlier set of IMU modules was unreliable, so I did not use them as my test hardware. The driver's hardware validation comes from the Gesture Glove build.
 
 ## Hardware and Tools
 
 - Arduino Leonardo
 - ATmega32U4 microcontroller
-- SSD1306 128×64 I2C OLED display
+- MPU6050 IMU (used in the Gesture Glove project)
 - PlatformIO
 - Visual Studio Code
 - C++
@@ -52,7 +48,7 @@ For this project, I wanted to learn:
 
 ## Public Functions
 
-The driver currently provides four main functions:
+The driver provides four main functions:
 
 ```cpp
 I2CInit();
@@ -75,7 +71,7 @@ Reads one or more bytes from an I2C device.
 
 ### `I2CWriteRead()`
 
-Writes data to a device, generates a repeated START and then reads data without releasing the bus.
+Writes data to a device, generates a repeated START, and then reads data without releasing the bus.
 
 ## Basic Transaction Flow
 
@@ -98,7 +94,6 @@ START
 → STOP
 ```
 
-
 ### Combined write-read transaction
 
 ```text
@@ -111,7 +106,6 @@ START
 → STOP
 ```
 
-
 ## Internal Design
 
 The driver uses private helper functions for operations such as:
@@ -123,7 +117,7 @@ The driver uses private helper functions for operations such as:
 - Writing one byte
 - Reading one byte
 
-These helpers are placed in an anonymous namespace so that they are only available inside the driver source file.
+These helpers are placed in an anonymous namespace so they are only available inside the driver source file.
 
 TWI status values and masks are stored as named `constexpr` constants.
 
@@ -135,18 +129,9 @@ If there is a wiring problem or the hardware does not respond correctly, waiting
 
 To avoid that, the driver uses a maximum loop count and returns a timeout status if the operation does not complete.
 
-## Planned OLED Test
+## Usage Example
 
-When the SSD1306 displays arrive, I plan to test the driver in stages:
-
-1. Check whether the display acknowledges its I2C address.
-2. Send the SSD1306 initialization commands.
-3. Clear the display.
-4. Draw a simple pattern or text.
-5. Use a logic analyzer later to inspect the I2C signals.
-
-
-The OLED will verify the initialization and write portions of the driver. A different I2C device will be needed later to fully verify reading and combined write-read transactions.
+See the [Gesture Glove](https://github.com/Yamin-Osman/Gesture-Glove) repository for a real use of this driver. It is included there under `lib/BareI2C/` and used to read IMU data instead of `Wire.h`.
 
 ## What I Learned
 
@@ -162,29 +147,28 @@ While building this project, I practiced:
 - Using an anonymous namespace
 - Checking pointers and arguments
 - Propagating errors between functions
+- Using the driver as a real dependency in another project
 - Using Git commits to track project milestones
 
 ## Project Structure
 
-
+```text
 BareMetalI2C/
 ├── lib/
-│ └── BareI2C/
-│ ├── BareI2C.h
-│ └── BareI2C.cpp
+│   └── BareI2C/
+│       ├── BareI2C.h
+│       └── BareI2C.cpp
 ├── src/
-│ └── main.cpp
+│   └── main.cpp
 ├── platformio.ini
 ├── .gitignore
 └── README.md
-
+```
 
 ## Limitations
 
-This is currently a learning project and has several limitations:
-
 - The driver is blocking rather than interrupt-driven.
-- Hardware testing is not yet complete.
+- It has been validated on one I2C device (an MPU6050 IMU), not across a range of devices.
 - It only supports 7-bit I2C addresses.
 - It does not automatically retry failed transactions.
 - It does not currently perform bus recovery.
@@ -193,14 +177,12 @@ This is currently a learning project and has several limitations:
 
 ## Future Work
 
-- Test `I2CWrite()` using the SSD1306 OLED
-- Test `I2CRead()` with a reliable readable device
-- Test repeated START using `I2CWriteRead()`
-- Add a simple SSD1306 example
-- Capture transactions using a logic analyzer
+- Test against additional I2C devices (for example, an SSD1306 OLED display)
+- Add a simple example program that scans for devices and reads a register
+- Capture transactions with a logic analyzer to verify timing and signal behavior
 - Add automated tests where possible
 - Improve bus recovery and error handling
 
 ## Author
 
-Built by an incoming first-year engineering student as part of learning embedded systems, C++ and register-level microcontroller programming.
+Built by Yamin Osman, a McMaster University Engineering student, as part of learning embedded systems, C++, and register-level microcontroller programming.
